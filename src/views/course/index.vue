@@ -73,7 +73,7 @@
           <el-input v-model="temp.title" />
         </el-form-item>
         <el-form-item label="课程目标" prop="title">
-          <el-input type="textarea" v-model="temp.title" />
+          <el-input v-model="temp.title" type="textarea" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
