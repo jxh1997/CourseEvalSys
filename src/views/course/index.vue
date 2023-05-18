@@ -2,10 +2,10 @@
   <div class="app-container">
     <div class="filter-container" style="display: flex; justify-content: space-between; align-items: center;">
       <div>
-        <el-input v-model="listQuery.username" placeholder="请输入课程名称" style="width: 200px; margin-right: 10px;" class="filter-item" @keyup.enter.native="handleFilter" />
+        <!-- <el-input v-model="listQuery.username" placeholder="请输入课程名称" style="width: 200px; margin-right: 10px;" class="filter-item" @keyup.enter.native="handleFilter" />
         <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
           搜索
-        </el-button>
+        </el-button> -->
         <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
           添加
         </el-button>
@@ -25,14 +25,9 @@
       style="width: 100%;"
       @sort-change="sortChange"
     >
-      <el-table-column label="ID" prop="id" sortable="custom" align="center" width="80" :class-name="getSortClass('id')">
-        <template slot-scope="{row}">
-          <span>{{ row.id }}</span>
-        </template>
-      </el-table-column>
       <el-table-column label="课程编号" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ row.id }}</span>
         </template>
       </el-table-column>
       <el-table-column label="课程名称" align="center">
@@ -46,6 +41,16 @@
         </template>
       </el-table-column>
       <el-table-column label="课程目标" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.author }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="课程占比（%）" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.author }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="课程类型" align="center">
         <template slot-scope="{row}">
           <span>{{ row.author }}</span>
         </template>
@@ -65,7 +70,7 @@
     <pagination v-show="total>0" :total="total" :page.sync="listQuery.page" :limit.sync="listQuery.limit" @pagination="getList" />
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
-      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
+      <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
         <el-form-item label="课程名称" prop="title">
           <el-input v-model="temp.title" />
         </el-form-item>
@@ -75,12 +80,20 @@
         <el-form-item label="课程目标" prop="title">
           <el-input v-model="temp.title" type="textarea" />
         </el-form-item>
+        <el-form-item label="课程占比（%）" prop="title">
+          <el-input v-model="temp.title" />
+        </el-form-item>
+        <el-form-item label="课程类型" prop="title">
+          <el-select ref="select" v-model="value" placeholder="请选择">
+            <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">
           取消
         </el-button>
-        <el-button type="primary" @click="dialogStatus==='添加课程'?createData():updateData()">
+        <el-button type="primary" @click="dialogStatus==='create'?createData():updateData()">
           确定
         </el-button>
       </div>
@@ -201,8 +214,12 @@ export default {
       downloadLoading: false,
       dialogVisible: false,
       listObj: {},
-      fileList: []
-
+      fileList: [],
+      options: [
+        { value: '1', label: '期末成绩计算' },
+        { value: '2', label: '达成度计算' }
+      ],
+      value: ''
     }
   },
   created() {
@@ -310,7 +327,7 @@ export default {
     },
     handleCreate() {
       this.resetTemp()
-      this.dialogStatus = '添加课程'
+      this.dialogStatus = 'create'
       this.dialogFormVisible = true
       this.$nextTick(() => {
         this.$refs['dataForm'].clearValidate()
@@ -337,7 +354,7 @@ export default {
     handleUpdate(row) {
       this.temp = Object.assign({}, row) // copy obj
       this.temp.timestamp = new Date(this.temp.timestamp)
-      this.dialogStatus = '编辑课程'
+      this.dialogStatus = 'update'
       this.dialogFormVisible = true
       this.$nextTick(() => {
         this.$refs['dataForm'].clearValidate()

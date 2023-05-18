@@ -1,10 +1,6 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <el-input v-model="listQuery.username" placeholder="请输入课程名称" style="width: 200px; margin-right: 10px;" class="filter-item" @keyup.enter.native="handleFilter" />
-      <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
-        搜索
-      </el-button>
       <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
         添加
       </el-button>
@@ -20,27 +16,27 @@
       style="width: 100%;"
       @sort-change="sortChange"
     >
-      <el-table-column label="ID" prop="id" sortable="custom" align="center" width="80" :class-name="getSortClass('id')">
+      <el-table-column label="班级编号" align="center">
         <template slot-scope="{row}">
           <span>{{ row.id }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程编号" align="center">
+      <el-table-column label="班级名称" align="center">
         <template slot-scope="{row}">
           <span>{{ row.author }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程名称" align="center">
+      <el-table-column label="班主任" align="center">
         <template slot-scope="{row}">
           <span>{{ row.author }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程负责人" align="center">
+      <el-table-column label="所在级部" align="center">
         <template slot-scope="{row}">
           <span>{{ row.author }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程目标" align="center">
+      <el-table-column label="辅导员" align="center">
         <template slot-scope="{row}">
           <span>{{ row.author }}</span>
         </template>
@@ -61,21 +57,24 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="课程名称" prop="title">
+        <el-form-item label="班级编号" prop="title">
           <el-input v-model="temp.title" />
         </el-form-item>
-        <el-form-item label="课程负责人" prop="title">
+        <el-form-item label="班级名称" prop="title">
           <el-input v-model="temp.title" />
         </el-form-item>
-        <el-form-item label="课程目标" prop="title">
-          <el-input v-model="temp.title" type="textarea" />
+        <el-form-item label="班主任" prop="title">
+          <el-input v-model="temp.title" />
+        </el-form-item>
+        <el-form-item label="所在级部" prop="title">
+          <el-input v-model="temp.title" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button @click="dialogFormVisible = false">
           取消
         </el-button>
-        <el-button type="primary" @click="dialogStatus==='添加课程'?createData():updateData()">
+        <el-button type="primary" @click="dialogStatus==='create'?createData():updateData()">
           确定
         </el-button>
       </div>
@@ -160,8 +159,8 @@ export default {
       dialogFormVisible: false,
       dialogStatus: '',
       textMap: {
-        update: '编辑课程',
-        create: '添加课程'
+        update: '编辑班级',
+        create: '添加班级'
       },
       dialogPvVisible: false,
       pvData: [],
@@ -227,7 +226,7 @@ export default {
     },
     handleCreate() {
       this.resetTemp()
-      this.dialogStatus = '添加课程'
+      this.dialogStatus = 'create'
       this.dialogFormVisible = true
       this.$nextTick(() => {
         this.$refs['dataForm'].clearValidate()
@@ -254,7 +253,7 @@ export default {
     handleUpdate(row) {
       this.temp = Object.assign({}, row) // copy obj
       this.temp.timestamp = new Date(this.temp.timestamp)
-      this.dialogStatus = '编辑课程'
+      this.dialogStatus = 'update'
       this.dialogFormVisible = true
       this.$nextTick(() => {
         this.$refs['dataForm'].clearValidate()
