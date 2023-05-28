@@ -21,24 +21,24 @@
           <span>{{ row.id }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="所属班级" align="center">
+        <template slot-scope="{row}">
+          <span>{{ getClassName(row.classId) }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="帮扶对象" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ getStudentName(row.studentId) }}</span>
         </template>
       </el-table-column>
       <el-table-column label="帮扶教师" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ getUserName(row.teacherId) }}</span>
         </template>
       </el-table-column>
       <el-table-column label="帮扶内容" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="帮扶时间" align="center">
-        <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ row.helpDesc }}</span>
         </template>
       </el-table-column>
       <el-table-column label="操作" align="center" width="230" class-name="small-padding fixed-width">
@@ -57,14 +57,18 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="帮扶对象" prop="title">
-          <el-input v-model="temp.title" />
+        <el-form-item label="所属班级" prop="classId">
+          <el-select ref="select" v-model="temp.classId" :disabled="dialogStatus==='create' ? false : true" placeholder="请选择">
+            <el-option v-for="item in classOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="帮扶内容" prop="title">
-          <el-input v-model="temp.title" />
+        <el-form-item label="帮扶对象" prop="studentId">
+          <el-select ref="select" v-model="temp.studentId" :disabled="dialogStatus==='create' ? false : true" placeholder="请选择">
+            <el-option v-for="item in studentOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="帮扶时间" prop="title">
-          <el-input v-model="temp.title" />
+        <el-form-item label="帮扶内容" prop="helpDesc">
+          <el-input v-model="temp.helpDesc" type="textarea" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -90,10 +94,14 @@
 </template>
 
 <script>
-import { fetchList, fetchPv, createArticle, updateArticle } from '@/api/article'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+import Pagination from '@/components/Pagination'
+import { addHelpInfo, delHelpInfo, getHelpInfo, updateHelpInfo } from '@/api/helping' // secondary package based on el-pagination
+import { getToken } from '@/utils/auth'
+import { fetchList } from '@/api/article'
+import { getClassList } from '@/api/student'
+import { getStudentinfo } from '@/api/student'
 
 const calendarTypeOptions = [
   { key: 'CN', display_name: 'China' },
@@ -132,12 +140,9 @@ export default {
       total: 0,
       listLoading: true,
       listQuery: {
+        pageon: true,
         page: 1,
-        limit: 20,
-        importance: undefined,
-        title: undefined,
-        type: undefined,
-        sort: '+id'
+        limit: 20
       },
       importanceOptions: [1, 2, 3],
       calendarTypeOptions,
@@ -146,12 +151,10 @@ export default {
       showReviewer: false,
       temp: {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        type: '',
-        status: 'published'
+        studentId: undefined,
+        classId: undefined,
+        teacherId: undefined,
+        helpDesc: undefined
       },
       dialogFormVisible: false,
       dialogStatus: '',
@@ -166,23 +169,97 @@ export default {
         timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
         title: [{ required: true, message: 'title is required', trigger: 'blur' }]
       },
-      downloadLoading: false
+      downloadLoading: false,
+      classOptions: [],
+      studentOptions: [],
+      usersOptions: []
     }
   },
   created() {
+    this.getClassList()
+    this.getStudentList()
+    this.getUserList()
     this.getList()
   },
   methods: {
+    getStudentName(row) {
+      let sName = '-'
+      this.studentOptions.map((c) => {
+        c.value === row && (sName = c.label)
+      })
+      return sName
+    },
+    getClassName(row) {
+      let className = '-'
+      this.classOptions.map((c) => {
+        c.value === row && (className = c.label)
+      })
+      return className
+    },
+    getUserName(row) {
+      let userName = '-'
+      this.usersOptions.map((c) => {
+        c.value === row && (userName = c.label)
+      })
+      return userName
+    },
+    getClassList() {
+      getClassList().then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.classname
+            }
+            labal.push(labaldata)
+          })
+          this.classOptions = labal
+        }
+      })
+    },
+    getStudentList() {
+      var params = {
+        pageon: false
+      }
+      getStudentinfo(params).then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.studentName
+            }
+            labal.push(labaldata)
+          })
+          this.studentOptions = labal
+        }
+      })
+    },
+    getUserList() {
+      var param = {
+        pageon: false
+      }
+      fetchList(param).then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.realname
+            }
+            labal.push(labaldata)
+          })
+          this.usersOptions = labal
+        }
+      })
+    },
     getList() {
       this.listLoading = true
-      fetchList(this.listQuery).then(response => {
-        this.list = response.data.items
-        this.total = response.data.total
-
-        // Just to simulate the time of the request
-        setTimeout(() => {
-          this.listLoading = false
-        }, 1.5 * 1000)
+      getHelpInfo(this.listQuery).then(response => {
+        this.list = response.data
+        this.total = response.total
+        this.listLoading = false
       })
     },
     handleFilter() {
@@ -213,12 +290,10 @@ export default {
     resetTemp() {
       this.temp = {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        status: 'published',
-        type: ''
+        studentId: undefined,
+        classId: undefined,
+        teacherId: undefined,
+        helpDesc: undefined
       }
     },
     handleCreate() {
@@ -232,17 +307,25 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          this.temp.id = parseInt(Math.random() * 100) + 1024 // mock a id
-          this.temp.author = 'vue-element-admin'
-          createArticle(this.temp).then(() => {
-            this.list.unshift(this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Created Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          this.temp.teacherId = getToken()
+          addHelpInfo(this.temp).then(response => {
+            if (response.code === 200) {
+              this.getList(this.listQuery)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `新建成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
       })
@@ -259,50 +342,59 @@ export default {
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          const tempData = Object.assign({}, this.temp)
-          tempData.timestamp = +new Date(tempData.timestamp) // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
-          updateArticle(tempData).then(() => {
-            const index = this.list.findIndex(v => v.id === this.temp.id)
-            this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Update Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          updateHelpInfo(this.temp).then(response => {
+            if (response.code === 200) {
+              const index = this.list.findIndex(v => v.id === this.temp.id)
+              this.list.splice(index, 1, this.temp)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `修改成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
       })
     },
     handleDelete(row, index) {
-      this.$notify({
-        title: 'Success',
-        message: 'Delete Successfully',
-        type: 'success',
-        duration: 2000
+      this.$confirm('确定要删除该记录?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
       })
-      this.list.splice(index, 1)
-    },
-    handleFetchPv(pv) {
-      fetchPv(pv).then(response => {
-        this.pvData = response.data.pvData
-        this.dialogPvVisible = true
-      })
+        .then(async() => {
+          delHelpInfo(row.id).then(response => {
+            if (response.code === 200) {
+              this.list.splice(index, 1)
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `删除成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
+          })
+        })
+        .catch(err => { console.error(err) })
     },
     handleDownload() {
       this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['timestamp', 'title', 'type', 'importance', 'status']
-        const filterVal = ['timestamp', 'title', 'type', 'importance', 'status']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'table-list'
-        })
-        this.downloadLoading = false
-      })
     },
     formatJson(filterVal) {
       return this.list.map(v => filterVal.map(j => {

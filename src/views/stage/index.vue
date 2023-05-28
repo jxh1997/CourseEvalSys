@@ -23,12 +23,7 @@
       </el-table-column>
       <el-table-column label="级部名称" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="辅导员" align="center">
-        <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ row.gradename }}</span>
         </template>
       </el-table-column>
       <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
@@ -47,14 +42,8 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="级部编号" prop="title">
-          <el-input v-model="temp.title" />
-        </el-form-item>
-        <el-form-item label="级部名称" prop="title">
-          <el-input v-model="temp.title" />
-        </el-form-item>
-        <el-form-item label="辅导员" prop="title">
-          <el-input v-model="temp.title" />
+        <el-form-item label="级部名称" prop="gradename">
+          <el-input v-model="temp.gradename" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -80,10 +69,11 @@
 </template>
 
 <script>
-import { fetchList, fetchPv, createArticle, updateArticle } from '@/api/article'
+import { getStageinfo, updateStage, delStage, addStage } from '@/api/stage'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+import { getToken } from '@/utils/auth'
+import Pagination from '@/components/Pagination'
 
 const calendarTypeOptions = [
   { key: 'CN', display_name: 'China' },
@@ -122,12 +112,10 @@ export default {
       total: 0,
       listLoading: true,
       listQuery: {
+        pageon: true,
         page: 1,
         limit: 20,
-        importance: undefined,
-        title: undefined,
-        type: undefined,
-        sort: '+id'
+        createby: getToken()
       },
       importanceOptions: [1, 2, 3],
       calendarTypeOptions,
@@ -136,12 +124,8 @@ export default {
       showReviewer: false,
       temp: {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        type: '',
-        status: 'published'
+        gradename: undefined,
+        createby: undefined
       },
       dialogFormVisible: false,
       dialogStatus: '',
@@ -165,14 +149,10 @@ export default {
   methods: {
     getList() {
       this.listLoading = true
-      fetchList(this.listQuery).then(response => {
-        this.list = response.data.items
-        this.total = response.data.total
-
-        // Just to simulate the time of the request
-        setTimeout(() => {
-          this.listLoading = false
-        }, 1.5 * 1000)
+      getStageinfo(this.listQuery).then(response => {
+        this.list = response.data
+        this.total = response.total
+        this.listLoading = false
       })
     },
     handleFilter() {
@@ -203,12 +183,8 @@ export default {
     resetTemp() {
       this.temp = {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        status: 'published',
-        type: ''
+        gradename: undefined,
+        createby: undefined
       }
     },
     handleCreate() {
@@ -222,24 +198,31 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          this.temp.id = parseInt(Math.random() * 100) + 1024 // mock a id
-          this.temp.author = 'vue-element-admin'
-          createArticle(this.temp).then(() => {
-            this.list.unshift(this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Created Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          this.temp.createby = getToken()
+          addStage(this.temp).then(response => {
+            if (response.code === 200) {
+              this.getList(this.listQuery)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `新建成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
       })
     },
     handleUpdate(row) {
       this.temp = Object.assign({}, row) // copy obj
-      this.temp.timestamp = new Date(this.temp.timestamp)
       this.dialogStatus = 'update'
       this.dialogFormVisible = true
       this.$nextTick(() => {
@@ -249,50 +232,59 @@ export default {
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          const tempData = Object.assign({}, this.temp)
-          tempData.timestamp = +new Date(tempData.timestamp) // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
-          updateArticle(tempData).then(() => {
-            const index = this.list.findIndex(v => v.id === this.temp.id)
-            this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Update Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          updateStage(this.temp).then(response => {
+            if (response.code === 200) {
+              const index = this.list.findIndex(v => v.id === this.temp.id)
+              this.list.splice(index, 1, this.temp)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `修改成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
       })
     },
     handleDelete(row, index) {
-      this.$notify({
-        title: 'Success',
-        message: 'Delete Successfully',
-        type: 'success',
-        duration: 2000
+      this.$confirm('确定要删除该级部?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
       })
-      this.list.splice(index, 1)
-    },
-    handleFetchPv(pv) {
-      fetchPv(pv).then(response => {
-        this.pvData = response.data.pvData
-        this.dialogPvVisible = true
-      })
+        .then(async() => {
+          delStage(row.id).then(response => {
+            if (response.code === 200) {
+              this.list.splice(index, 1)
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `删除成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
+          })
+        })
+        .catch(err => { console.error(err) })
     },
     handleDownload() {
       this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['timestamp', 'title', 'type', 'importance', 'status']
-        const filterVal = ['timestamp', 'title', 'type', 'importance', 'status']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'table-list'
-        })
-        this.downloadLoading = false
-      })
     },
     formatJson(filterVal) {
       return this.list.map(v => filterVal.map(j => {

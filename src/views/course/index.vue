@@ -2,16 +2,13 @@
   <div class="app-container">
     <div class="filter-container" style="display: flex; justify-content: space-between; align-items: center;">
       <div>
-        <!-- <el-input v-model="listQuery.username" placeholder="请输入课程名称" style="width: 200px; margin-right: 10px;" class="filter-item" @keyup.enter.native="handleFilter" />
+        <el-input v-model="listQuery.courseName" placeholder="请输入课程名称" style="width: 200px; margin-right: 10px;" class="filter-item" @keyup.enter.native="handleFilter" />
         <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
           搜索
-        </el-button> -->
+        </el-button>
         <el-button class="filter-item" style="margin-left: 10px;" type="primary" icon="el-icon-edit" @click="handleCreate">
           添加
         </el-button>
-      </div>
-      <div>
-        <el-button :style="{background:'#1890ff',borderColor:'#1890ff'}" icon="el-icon-upload" size="mini" type="primary" @click=" dialogVisible=true">教学大纲上传</el-button>
       </div>
     </div>
 
@@ -32,33 +29,57 @@
       </el-table-column>
       <el-table-column label="课程名称" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ row.courseName }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程负责人" align="center">
+      <el-table-column label="任课教师" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ getUserName(row.courseTeacher) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程目标" align="center">
+      <el-table-column label="所属班级" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ getClassName(row.courseClass) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程占比（%）" align="center">
+      <el-table-column label="所属级部" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ getGradeName(row.courseGrade) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="课程类型" align="center">
+      <el-table-column label="所属学期" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ row.courseYear }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
+      <el-table-column label="成绩定量分析达成度" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.reportValue }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="定性评价达成度" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.selfValue }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="综合达成度" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.courseReach }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="Actions" align="center" width="250" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
+          <el-button type="primary" size="mini" @click="handleTarget(row)">
+            课程目标
+          </el-button>
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
             编辑
+          </el-button>
+          <el-button type="warn" size="mini" @click="calculatorReport(row)">
+            计算达成度
+          </el-button>
+          <el-button size="mini" @click="calculatorReportInfo(row)">
+            班级达成度明细
           </el-button>
           <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row,$index)">
             删除
@@ -71,22 +92,21 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="课程名称" prop="title">
-          <el-input v-model="temp.title" />
+        <el-form-item label="课程名称" prop="courseName">
+          <el-input v-model="temp.courseName" />
         </el-form-item>
-        <el-form-item label="课程负责人" prop="title">
-          <el-input v-model="temp.title" />
-        </el-form-item>
-        <el-form-item label="课程目标" prop="title">
-          <el-input v-model="temp.title" type="textarea" />
-        </el-form-item>
-        <el-form-item label="课程占比（%）" prop="title">
-          <el-input v-model="temp.title" />
-        </el-form-item>
-        <el-form-item label="课程类型" prop="title">
-          <el-select ref="select" v-model="value" placeholder="请选择">
-            <el-option v-for="item in options" :key="item.value" :label="item.label" :value="item.value" />
+        <el-form-item label="班级" prop="courseClass">
+          <el-select ref="select" v-model="temp.courseClass" :disabled="dialogStatus==='create' ? false : true" placeholder="请选择班级">
+            <el-option v-for="item in classOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="级部" prop="courseGrade">
+          <el-select ref="select" v-model="temp.courseGrade" :disabled="dialogStatus==='create' ? false : true" placeholder="请选择级部">
+            <el-option v-for="item in gradeOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="所属学期" prop="courseYear">
+          <el-input v-model="temp.courseYear" :disabled="dialogStatus==='create' ? false : true" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -99,10 +119,37 @@
       </div>
     </el-dialog>
 
-    <el-dialog :visible.sync="dialogPvVisible" title="Reading statistics">
+    <el-dialog title="课程目标" :visible.sync="dialogFormVisible1">
+      <el-form ref="dataForm1" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
+        <el-form-item label="成绩类型" prop="courseType">
+          <el-select ref="select" v-model="temp.courseType" placeholder="请选择成绩类型"  @change="handleChange">
+            <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="成绩组成" prop="coursePart">
+          <el-select ref="select" v-model="temp.coursePart" placeholder="请选择课程目标">
+            <el-option v-for="item in partOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="权重" prop="partWeight">
+          <el-input v-model="temp.partWeight" />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogFormVisible1 = false">
+          取消
+        </el-button>
+        <el-button type="primary" @click="updateData1()">
+          确定
+        </el-button>
+      </div>
+    </el-dialog>
+
+
+    <el-dialog :visible.sync="dialogPvVisible" title="班级达成度详情">
       <el-table :data="pvData" border fit highlight-current-row style="width: 100%">
-        <el-table-column prop="key" label="Channel" />
-        <el-table-column prop="pv" label="Pv" />
+        <el-table-column prop="key" label="达成度类型" />
+        <el-table-column prop="pv" label="得分" />
       </el-table>
       <span slot="footer" class="dialog-footer">
         <el-button type="primary" @click="dialogPvVisible = false">取消</el-button>
@@ -119,7 +166,6 @@
         :before-upload="beforeUpload"
         class="editor-slide-upload"
         action="https://httpbin.org/post"
-        list-type="picture-card"
       >
         <el-button size="small" type="primary">
           点击上传教学大纲
@@ -136,22 +182,14 @@
 </template>
 
 <script>
-import { fetchList, fetchPv, createArticle, updateArticle } from '@/api/article'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
-const calendarTypeOptions = [
-  { key: 'CN', display_name: 'China' },
-  { key: 'US', display_name: 'USA' },
-  { key: 'JP', display_name: 'Japan' },
-  { key: 'EU', display_name: 'Eurozone' }
-]
-
-// arr to obj, such as { CN : "China", US : "USA" }
-const calendarTypeKeyValue = calendarTypeOptions.reduce((acc, cur) => {
-  acc[cur.key] = cur.display_name
-  return acc
-}, {})
+import Pagination from '@/components/Pagination'
+import { getToken } from '@/utils/auth'
+import { mapGetters } from 'vuex'
+import { addCourseHeaders, delCourseHeaders, getCourseHeaders, updateCourseHeaders, calculatorReport, calculateDetail, getCesCourseLinesById, addCesCourseLines, upCesCourseLines } from '@/api/course' // secondary package based on el-pagination
+import { fetchList } from '@/api/article'
+import { getClassList, getGradeList } from '@/api/student'
 
 export default {
   name: 'ComplexTable',
@@ -165,10 +203,12 @@ export default {
         deleted: 'danger'
       }
       return statusMap[status]
-    },
-    typeFilter(type) {
-      return calendarTypeKeyValue[type]
     }
+  },
+  computed: {
+    ...mapGetters([
+      'name'
+    ])
   },
   data() {
     return {
@@ -177,28 +217,30 @@ export default {
       total: 0,
       listLoading: true,
       listQuery: {
+        pageon: true,
         page: 1,
-        limit: 20,
-        importance: undefined,
-        title: undefined,
-        type: undefined,
-        sort: '+id'
+        limit: 20
       },
       importanceOptions: [1, 2, 3],
-      calendarTypeOptions,
       sortOptions: [{ label: 'ID Ascending', key: '+id' }, { label: 'ID Descending', key: '-id' }],
       statusOptions: ['published', 'draft', 'deleted'],
       showReviewer: false,
       temp: {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        type: '',
-        status: 'published'
+        courseClass: undefined,
+        courseGrade: undefined,
+        courseName: undefined,
+        courseTeacher: getToken(),
+        courseYear: undefined
+      },
+      temp1: {
+        id: undefined,
+        coursePart: undefined,
+        courseType: undefined,
+        partWeight: undefined
       },
       dialogFormVisible: false,
+      dialogFormVisible1: false,
       dialogStatus: '',
       textMap: {
         update: '编辑课程',
@@ -206,26 +248,119 @@ export default {
       },
       dialogPvVisible: false,
       pvData: [],
-      rules: {
-        type: [{ required: true, message: 'type is required', trigger: 'change' }],
-        timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
-        title: [{ required: true, message: 'title is required', trigger: 'blur' }]
-      },
+      rules: {},
       downloadLoading: false,
       dialogVisible: false,
       listObj: {},
       fileList: [],
-      options: [
-        { value: '1', label: '期末成绩计算' },
-        { value: '2', label: '达成度计算' }
+      partOptions: [
+        { value: '1', label: '小测验' },
+        { value: '2', label: '期末考试' },
+        { value: '3', label: '作业' },
+        { value: '4', label: '大作业' },
+        { value: '5', label: '平时考核' }
       ],
+      typeOptions: [
+        { value: '1', label: '期末成绩' },
+        { value: '2', label: '达成度' },
+        { value: '3', label: '平时成绩' }
+      ],
+      classOptions: [],
+      gradeOptions: [],
+      usersOptions: [],
       value: ''
     }
   },
   created() {
+    this.getClassList()
+    this.getGradeList()
+    this.getUserList()
     this.getList()
   },
   methods: {
+    calculatorReportInfo(row) {
+      this.dialogPvVisible = true
+      calculateDetail(row.id).then(response => {
+        if (response.code === 200) {
+          console.log(123, response.data)
+        }
+      })
+    },
+    getClassName(row) {
+      let className = '-'
+      this.classOptions.map((c) => {
+        c.value === row && (className = c.label)
+      })
+      return className
+    },
+    getGradeName(row) {
+      let gradeName = '-'
+      this.gradeOptions.map((c) => {
+        c.value === row && (gradeName = c.label)
+      })
+      return gradeName
+    },
+
+    getUserName(row) {
+      let userName = '-'
+      this.usersOptions.map((c) => {
+        c.value === row && (userName = c.label)
+      })
+      return userName
+    },
+
+    // 用户列表
+    getUserList() {
+      var param = {
+        pageon: false
+      }
+      fetchList(param).then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.realname
+            }
+            labal.push(labaldata)
+          })
+          this.usersOptions = labal
+        }
+      })
+    },
+
+    // 班级列表
+    async getClassList() {
+      getClassList().then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.classname
+            }
+            labal.push(labaldata)
+          })
+          this.classOptions = labal
+        }
+      })
+    },
+    // 级部列表
+    async getGradeList() {
+      getGradeList().then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.gradename
+            }
+            labal.push(labaldata)
+          })
+          this.gradeOptions = labal
+        }
+      })
+    },
     // upload
     checkAllSuccess() {
       return Object.keys(this.listObj).every(item => this.listObj[item].hasSuccess)
@@ -279,14 +414,10 @@ export default {
 
     getList() {
       this.listLoading = true
-      fetchList(this.listQuery).then(response => {
-        this.list = response.data.items
-        this.total = response.data.total
-
-        // Just to simulate the time of the request
-        setTimeout(() => {
-          this.listLoading = false
-        }, 1.5 * 1000)
+      getCourseHeaders(this.listQuery).then(response => {
+        this.list = response.data
+        this.total = response.total
+        this.listLoading = false
       })
     },
     handleFilter() {
@@ -317,12 +448,11 @@ export default {
     resetTemp() {
       this.temp = {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        status: 'published',
-        type: ''
+        courseClass: undefined,
+        courseGrade: undefined,
+        courseName: undefined,
+        courseTeacher: undefined,
+        courseYear: undefined
       }
     },
     handleCreate() {
@@ -336,21 +466,76 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          this.temp.id = parseInt(Math.random() * 100) + 1024 // mock a id
-          this.temp.author = 'vue-element-admin'
-          createArticle(this.temp).then(() => {
-            this.list.unshift(this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Created Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          this.temp.courseTeacher = getToken()
+          addCourseHeaders(this.temp).then(response => {
+            if (response.code === 200) {
+              this.getList(this.listQuery)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `新建成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
       })
     },
+    calculatorReport(row) {
+      calculatorReport(row.id).then(response => {
+        if (response.code === 200) {
+          this.getList(this.listQuery)
+          this.dialogFormVisible = false
+          this.$notify({
+            title: 'Success',
+            dangerouslyUseHTMLString: true,
+            message: `计算成功`,
+            type: 'success'
+          })
+        } else {
+          this.$notify({
+            title: 'Fail',
+            dangerouslyUseHTMLString: true,
+            message: response.msg,
+            type: 'error'
+          })
+        }
+      })
+    },
+    handleTarget(row) {
+      this.temp1 = Object.assign({}, row) // copy obj
+      this.temp1.timestamp = new Date(this.temp.timestamp)
+      this.dialogFormVisible1 = true
+      this.$nextTick(() => {
+        this.$refs['dataForm1'].clearValidate()
+      })
+      this.getData1(row.id)
+    },
+
+    getData1(id) {
+      var param = {
+        'id': id
+      }
+      getCesCourseLinesById(param).then(response => {
+        if (response.code === 200) {
+          this.temp = Object.assign({}, {
+            id: id,
+            coursePart: response.data.coursePart.toString(),
+            courseType: response.data.courseType.toString(),
+            partWeight: response.data.partWeight.toString()
+          })
+        }
+      })
+    },
+
     handleUpdate(row) {
       this.temp = Object.assign({}, row) // copy obj
       this.temp.timestamp = new Date(this.temp.timestamp)
@@ -360,53 +545,100 @@ export default {
         this.$refs['dataForm'].clearValidate()
       })
     },
+
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          const tempData = Object.assign({}, this.temp)
-          tempData.timestamp = +new Date(tempData.timestamp) // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
-          updateArticle(tempData).then(() => {
-            const index = this.list.findIndex(v => v.id === this.temp.id)
-            this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Update Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          updateCourseHeaders(this.temp).then(response => {
+            if (response.code === 200) {
+              const index = this.list.findIndex(v => v.id === this.temp.id)
+              this.list.splice(index, 1, this.temp)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `修改成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
+          })
+        }
+      })
+    },
+    handleChange(e) {
+      // this.partOptions.length = 0
+      // if (e.toString() === '1') {
+      //   this.partOptions.push({ value: '2', label: '期末考试' }, { value: '5', label: '平时考核' })
+      // }
+      // if (e.toString() === '2') {
+      //   this.partOptions.push({ value: '1', label: '小测验' }, { value: '2', label: '期末考试' }, { value: '3', label: '作业' }, { value: '4', label: '大作业' })
+      // }
+      // if (e.toString() === '3') {
+      //   this.partOptions.push({ value: '1', label: '小测验' }, { value: '3', label: '作业' }, { value: '4', label: '大作业' })
+      // }
+    },
+    updateData1() {
+      this.$refs['dataForm1'].validate((valid) => {
+        if (valid) {
+          upCesCourseLines(this.temp).then(response => {
+            console.log(123, response.data)
+            if (response.code === 200) {
+              this.dialogFormVisible1 = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `修改成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
       })
     },
     handleDelete(row, index) {
-      this.$notify({
-        title: 'Success',
-        message: 'Delete Successfully',
-        type: 'success',
-        duration: 2000
+      this.$confirm('确定要删除该课程?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
       })
-      this.list.splice(index, 1)
-    },
-    handleFetchPv(pv) {
-      fetchPv(pv).then(response => {
-        this.pvData = response.data.pvData
-        this.dialogPvVisible = true
-      })
+        .then(async() => {
+          delCourseHeaders(row.id).then(response => {
+            if (response.code === 200) {
+              this.list.splice(index, 1)
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `删除成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
+          })
+        })
+        .catch(err => { console.error(err) })
     },
     handleDownload() {
       this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['timestamp', 'title', 'type', 'importance', 'status']
-        const filterVal = ['timestamp', 'title', 'type', 'importance', 'status']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'table-list'
-        })
-        this.downloadLoading = false
-      })
     },
     formatJson(filterVal) {
       return this.list.map(v => filterVal.map(j => {

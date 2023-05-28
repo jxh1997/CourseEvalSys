@@ -16,25 +16,20 @@
       style="width: 100%;"
       @sort-change="sortChange"
     >
-      <el-table-column label="计划编号" align="center">
+      <el-table-column label="大纲编号" align="center">
         <template slot-scope="{row}">
           <span>{{ row.id }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="计划学期" align="center">
+      <el-table-column label="所属课程" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="计划内容" align="center">
-        <template slot-scope="{row}">
-          <span>{{ row.author }}</span>
+          <span>{{ getCourseName(row.courseId) }}</span>
         </template>
       </el-table-column>
       <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
-          <el-button type="primary" size="mini" @click="handleUpdate(row)">
-            编辑
+          <el-button type="warn" size="mini" @click="dowbloadFile(row)">
+            下载大纲
           </el-button>
           <el-button v-if="row.status!='deleted'" size="mini" type="danger" @click="handleDelete(row,$index)">
             删除
@@ -47,14 +42,15 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="100px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="计划编号" prop="title">
-          <el-input v-model="temp.title" />
+        <el-form-item label="所属课程" prop="courseId">
+          <el-select ref="select" v-model="temp.courseId" :disabled="dialogStatus==='create' ? false : true" placeholder="请选择课程">
+            <el-option v-for="item in courseOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
         </el-form-item>
-        <el-form-item label="计划学期" prop="title">
-          <el-input v-model="temp.title" />
-        </el-form-item>
-        <el-form-item label="计划内容" prop="title">
-          <el-input v-model="temp.title" />
+        <el-form-item label="教学大纲" prop="fileId">
+          <div>
+            <el-button :style="{background:'#1890ff',borderColor:'#1890ff'}" icon="el-icon-upload" size="mini" type="primary" @click="dialogVisible=true">教学大纲上传</el-button>
+          </div>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -76,14 +72,46 @@
         <el-button type="primary" @click="dialogPvVisible = false">取消</el-button>
       </span>
     </el-dialog>
+
+    <el-dialog :visible.sync="dialogVisible">
+      <el-upload
+        :multiple="true"
+        :file-list="fileList"
+        :show-file-list="true"
+        :on-remove="handleRemove"
+        :on-success="handleSuccess"
+        :before-upload="beforeUpload"
+        :limit="1"
+        class="editor-slide-upload"
+        action="/api/courseevalsys/common/uploadfile"
+        list-type="picture-card"
+      >
+        <el-button size="small" type="primary">
+          点击上传教学大纲
+        </el-button>
+      </el-upload>
+      <el-button @click="dialogVisible = false">
+        取消
+      </el-button>
+      <el-button type="primary" @click="handleSubmit">
+        确认
+      </el-button>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { fetchList, fetchPv, createArticle, updateArticle } from '@/api/article'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
-import Pagination from '@/components/Pagination' // secondary package based on el-pagination
+import Pagination from '@/components/Pagination'
+import { getCourseHeaders } from '@/api/course'
+import {
+  addCourseFramework,
+  delCourseFramework,
+  downloadFile,
+  getCourseFramework,
+  updateCourseFramework
+} from '@/api/teaching' // secondary package based on el-pagination
 
 const calendarTypeOptions = [
   { key: 'CN', display_name: 'China' },
@@ -120,14 +148,14 @@ export default {
       tableKey: 0,
       list: null,
       total: 0,
+      dialogVisible: false,
+      listObj: {},
+      fileList: [],
       listLoading: true,
       listQuery: {
+        pageon: true,
         page: 1,
-        limit: 20,
-        importance: undefined,
-        title: undefined,
-        type: undefined,
-        sort: '+id'
+        limit: 20
       },
       importanceOptions: [1, 2, 3],
       calendarTypeOptions,
@@ -136,12 +164,8 @@ export default {
       showReviewer: false,
       temp: {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        type: '',
-        status: 'published'
+        fileId: undefined,
+        courseId: undefined
       },
       dialogFormVisible: false,
       dialogStatus: '',
@@ -156,24 +180,106 @@ export default {
         timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
         title: [{ required: true, message: 'title is required', trigger: 'blur' }]
       },
-      downloadLoading: false
+      downloadLoading: false,
+      courseOptions: []
     }
   },
   created() {
+    this.getCourseList()
     this.getList()
   },
   methods: {
+    getCourseName(row) {
+      let cName = '-'
+      this.courseOptions.map((c) => {
+        c.value === row && (cName = c.label)
+      })
+      return cName
+    },
+    getCourseList() {
+      var params = {
+        pageon: false
+      }
+      getCourseHeaders(params).then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.courseName
+            }
+            labal.push(labaldata)
+          })
+          this.courseOptions = labal
+        }
+      })
+    },
     getList() {
       this.listLoading = true
-      fetchList(this.listQuery).then(response => {
-        this.list = response.data.items
-        this.total = response.data.total
-
-        // Just to simulate the time of the request
-        setTimeout(() => {
-          this.listLoading = false
-        }, 1.5 * 1000)
+      getCourseFramework(this.listQuery).then(response => {
+        this.list = response.data
+        this.total = response.total
+        this.listLoading = false
       })
+    },
+    checkAllSuccess() {
+      return true
+    },
+    handleRemove(file) {
+      const uid = file.uid
+      const objKeyArr = Object.keys(this.listObj)
+      for (let i = 0, len = objKeyArr.length; i < len; i++) {
+        if (this.listObj[objKeyArr[i]].uid === uid) {
+          delete this.listObj[objKeyArr[i]]
+          return
+        }
+      }
+    },
+    handleSubmit() {
+      const arr = Object.keys(this.listObj).map(v => this.listObj[v])
+      if (!this.checkAllSuccess()) {
+        this.$message('Please wait for all images to be uploaded successfully. If there is a network problem, please refresh the page and upload again!')
+        return
+      }
+      this.$emit('successCBK', arr)
+      this.listObj = {}
+      this.fileList = []
+      this.dialogVisible = false
+    },
+    beforeUpload(file) {
+      const _self = this
+      const _URL = window.URL || window.webkitURL
+      const fileName = file.uid
+      this.listObj[fileName] = {}
+      return new Promise((resolve, reject) => {
+        const img = new Image()
+        img.src = _URL.createObjectURL(file)
+        img.onload = function() {
+          _self.listObj[fileName] = { hasSuccess: false, uid: file.uid, width: this.width, height: this.height }
+        }
+        resolve(true)
+      })
+    },
+    handleSuccess(response, file) {
+      const uid = file.uid
+      const objKeyArr = Object.keys(this.listObj)
+      if (response.code !== 200) {
+        this.$notify({
+          title: 'Fail',
+          dangerouslyUseHTMLString: true,
+          message: response.msg,
+          type: 'error'
+        })
+      } else {
+        this.temp.fileId = response.data.id
+        for (let i = 0, len = objKeyArr.length; i < len; i++) {
+          if (this.listObj[objKeyArr[i]].uid === uid) {
+            this.listObj[objKeyArr[i]].fileid = response.data.id
+            this.listObj[objKeyArr[i]].hasSuccess = true
+            return
+          }
+        }
+      }
     },
     handleFilter() {
       this.listQuery.page = 1
@@ -203,12 +309,8 @@ export default {
     resetTemp() {
       this.temp = {
         id: undefined,
-        importance: 1,
-        remark: '',
-        timestamp: new Date(),
-        title: '',
-        status: 'published',
-        type: ''
+        fileId: undefined,
+        courseId: undefined
       }
     },
     handleCreate() {
@@ -222,77 +324,112 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          this.temp.id = parseInt(Math.random() * 100) + 1024 // mock a id
-          this.temp.author = 'vue-element-admin'
-          createArticle(this.temp).then(() => {
-            this.list.unshift(this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Created Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          addCourseFramework(this.temp).then(response => {
+            if (response.code === 200) {
+              this.getList(this.listQuery)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `新建成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
-      })
-    },
-    handleUpdate(row) {
-      this.temp = Object.assign({}, row) // copy obj
-      this.temp.timestamp = new Date(this.temp.timestamp)
-      this.dialogStatus = 'update'
-      this.dialogFormVisible = true
-      this.$nextTick(() => {
-        this.$refs['dataForm'].clearValidate()
       })
     },
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          const tempData = Object.assign({}, this.temp)
-          tempData.timestamp = +new Date(tempData.timestamp) // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
-          updateArticle(tempData).then(() => {
-            const index = this.list.findIndex(v => v.id === this.temp.id)
-            this.list.splice(index, 1, this.temp)
-            this.dialogFormVisible = false
-            this.$notify({
-              title: 'Success',
-              message: 'Update Successfully',
-              type: 'success',
-              duration: 2000
-            })
+          updateCourseFramework(this.temp).then(response => {
+            if (response.code === 200) {
+              const index = this.list.findIndex(v => v.id === this.temp.id)
+              this.list.splice(index, 1, this.temp)
+              this.dialogFormVisible = false
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `修改成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
           })
         }
       })
     },
     handleDelete(row, index) {
-      this.$notify({
-        title: 'Success',
-        message: 'Delete Successfully',
-        type: 'success',
-        duration: 2000
+      this.$confirm('确定要删除该大纲?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
       })
-      this.list.splice(index, 1)
+        .then(async() => {
+          delCourseFramework(row.id).then(response => {
+            if (response.code === 200) {
+              this.list.splice(index, 1)
+              this.$notify({
+                title: 'Success',
+                dangerouslyUseHTMLString: true,
+                message: `删除成功`,
+                type: 'success'
+              })
+            } else {
+              this.$notify({
+                title: 'Fail',
+                dangerouslyUseHTMLString: true,
+                message: response.msg,
+                type: 'error'
+              })
+            }
+          })
+        })
+        .catch(err => { console.error(err) })
     },
-    handleFetchPv(pv) {
-      fetchPv(pv).then(response => {
-        this.pvData = response.data.pvData
-        this.dialogPvVisible = true
+    dowbloadFile(row) {
+      downloadFile(row.fileId).then(response => {
+        if (response.code === 200) {
+          var downloadpath = '/api/upload/'
+          const a = document.createElement('a')
+          a.style.display = 'none'
+          a.setAttribute('target', '_blank')
+          response.data.filename.split('-')[1] && a.setAttribute('download', response.data.filename.split('-')[1])
+          a.href = downloadpath + response.data.filename
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          this.$notify({
+            title: 'Success',
+            dangerouslyUseHTMLString: true,
+            message: `下载成功`,
+            type: 'success'
+          })
+        } else {
+          this.$notify({
+            title: 'Fail',
+            dangerouslyUseHTMLString: true,
+            message: response.msg,
+            type: 'error'
+          })
+        }
       })
     },
     handleDownload() {
       this.downloadLoading = true
-      import('@/vendor/Export2Excel').then(excel => {
-        const tHeader = ['timestamp', 'title', 'type', 'importance', 'status']
-        const filterVal = ['timestamp', 'title', 'type', 'importance', 'status']
-        const data = this.formatJson(filterVal)
-        excel.export_json_to_excel({
-          header: tHeader,
-          data,
-          filename: 'table-list'
-        })
-        this.downloadLoading = false
-      })
     },
     formatJson(filterVal) {
       return this.list.map(v => filterVal.map(j => {

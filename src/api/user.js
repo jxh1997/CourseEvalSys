@@ -2,23 +2,24 @@ import request from '@/utils/request'
 
 export function login(data) {
   return request({
-    url: '/vue-element-admin/user/login',
-    method: 'post',
-    data
+    url: 'courseevalsys/common/login',
+    method: 'POST',
+    params: { 'username': data.username, 'password': data.password }
   })
 }
 
 export function getInfo(token) {
+  console.log(token)
   return request({
-    url: '/vue-element-admin/user/info',
-    method: 'get',
-    params: { token }
+    url: 'courseevalsys/common/getauthlist',
+    method: 'POST',
+    params: { 'uid': token }
   })
 }
 
 export function logout() {
   return request({
     url: '/vue-element-admin/user/logout',
-    method: 'post'
+    method: 'POST'
   })
 }
