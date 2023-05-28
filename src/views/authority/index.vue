@@ -1,16 +1,14 @@
 <template>
   <div class="app-container">
-    <el-button type="primary" @click="handleAddRole">新增用户角色</el-button>
-
     <el-table :data="rolesList" style="width: 100%;margin-top:30px;" border>
       <el-table-column label="唯一标识" prop="id" sortable="custom" align="center" width="80">
         <template slot-scope="{row}">
           <span>{{ row.id }}</span>
         </template>
       </el-table-column>
-      <el-table-column align="center" label="已授权用户" width="220">
+      <el-table-column align="center" label="用户名" width="220">
         <template slot-scope="{row}">
-          {{ row.identityName }}
+          {{ row.username }}
         </template>
       </el-table-column>
       <el-table-column align="center" label="操作">
@@ -35,10 +33,7 @@
 
     <el-dialog :visible.sync="dialogVisible2" :title="dialogType==='edit'?'编辑':'新增'">
       <el-form :model="role" label-width="80px" label-position="left">
-        <el-form-item label="角色名">
-          <el-input v-model="role.identityName" placeholder="Role Name" />
-        </el-form-item>
-        <el-form-item label="菜单">
+        <el-form-item label="角色">
           <el-tree
             ref="tree"
             :check-strictly="checkStrictly"
@@ -48,13 +43,12 @@
             node-key="id"
             :default-checked-keys="checkedKeys"
             class="permission-tree"
-            @check="changeauth"
+            @check="changeuserAuth"
           />
         </el-form-item>
       </el-form>
       <div style="text-align:right;">
-        <el-button type="danger" @click="dialogVisible2=false">取消</el-button>
-        <el-button type="primary" @click="confirmRole">确定</el-button>
+        <el-button type="danger" @click="dialogVisible2=false">关闭</el-button>
       </div>
     </el-dialog>
   </div>
@@ -63,7 +57,8 @@
 <script>
 import path from 'path'
 import { deepClone } from '@/utils'
-import { getRoutes, addRole, deleteRole, updateRole, changeAuth, getUserAuthList, getAuthSetList, changeUserAuth } from '@/api/role'
+import { addRole, deleteRole, updateRole, changeuserAuth, getuserauthlist } from '@/api/role'
+import { fetchList } from '@/api/article'
 
 const defaultRole = {
   id: '',
@@ -87,7 +82,7 @@ export default {
       checkStrictly: false,
       defaultProps: {
         children: 'children',
-        label: 'tabName'
+        label: 'identityName'
       },
       checkedKeys: []
     }
@@ -102,18 +97,18 @@ export default {
   },
   methods: {
     async getRoutes(id) {
-      const res = await getRoutes(id)
+      const res = await getuserauthlist(id)
       this.serviceRoutes = res.data
       this.routes = this.generateRoutes(res.data, id)
     },
     async getRoles(listQuery) {
-      const res = await getAuthSetList(listQuery)
+      const res = await fetchList(listQuery)
       console.log(123, res.data)
       this.rolesList = res.data
     },
 
-    changeauth(data) {
-      changeAuth(data).then(response => {
+    changeuserAuth(data) {
+      changeuserAuth(data).then(response => {
         if (response.code === 200) {
           this.$notify({
             title: 'Success',
@@ -147,8 +142,8 @@ export default {
 
         const data = {
           id: route.id,
-          authid: authid,
-          tabName: route.tabName,
+          hid: route.hid,
+          identityName: route.identityName,
           ischeck: route.ischeck
         }
         if (route.ischeck === 1) {
@@ -184,7 +179,7 @@ export default {
       this.dialogVisible = true
     },
     handleEdit(scope) {
-      console.log(scope)
+      this.checkedKeys = []
       this.getRoutes(scope.row.id)
       this.dialogType = 'edit'
       this.dialogVisible2 = true

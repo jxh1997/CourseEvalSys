@@ -9,6 +9,14 @@ export function getRoutes(query) {
   })
 }
 
+export function getuserauthlist(query) {
+  return request({
+    url: '/courseevalsys/common/getuserauthlist',
+    method: 'POST',
+    params: { 'hid': query }
+  })
+}
+
 export function getRoles(query) {
   return request({
     url: baseurl + '/getSysIdentityHeadersByParam',
@@ -41,20 +49,19 @@ export function changeAuth(data) {
   })
 }
 
+export function changeuserAuth(data) {
+  return request({
+    url: `/courseevalsys/common/changeuserAuth`,
+    method: 'POST',
+    params: { 'hid': data.hid, 'id': data.id }
+  })
+}
+
 export function deleteRole(id) {
   return request({
     url: baseurl + `/removeSysIdentityHeaders`,
     method: 'POST',
     params: { 'id': id }
-  })
-}
-
-// 获取用户角色设置列表
-export function getUserAuthList(query) {
-  return request({
-    url: '/courseevalsys/common/getuserauthlist',
-    method: 'POST',
-    params: query
   })
 }
 

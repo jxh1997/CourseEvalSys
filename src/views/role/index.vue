@@ -53,8 +53,7 @@
         </el-form-item>
       </el-form>
       <div style="text-align:right;">
-        <el-button type="danger" @click="dialogVisible2=false">取消</el-button>
-        <el-button type="primary" @click="confirmRole">确定</el-button>
+        <el-button type="danger" @click="dialogVisible2=false">关闭</el-button>
       </div>
     </el-dialog>
   </div>
@@ -184,7 +183,7 @@ export default {
       this.dialogVisible = true
     },
     handleEdit(scope) {
-      console.log(scope)
+      this.checkedKeys = []
       this.getRoutes(scope.row.id)
       this.dialogType = 'edit'
       this.dialogVisible2 = true

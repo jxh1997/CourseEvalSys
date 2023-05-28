@@ -97,6 +97,19 @@ export const constantRoutes = [
     ]
   },
   {
+    path: '/courseTarget',
+    component: Layout,
+    redirect: '/courseTarget/index',
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/courseTarget/index'),
+        name: '课程目标',
+        meta: { title: '课程目标', icon: 'component', noCache: true }
+      }
+    ]
+  },
+  {
     path: '/grade',
     component: Layout,
     redirect: '/grade/index',

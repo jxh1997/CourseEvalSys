@@ -57,11 +57,19 @@ export function getCesCourseLinesById(query) {
   })
 }
 
+export function getCesCourseLines(query) {
+  return request({
+    url: `/courseevalsys/cesCourseLines/getCesCourseLinesByParam`,
+    method: 'post',
+    params: query
+  })
+}
+
 export function addCesCourseLines(data) {
   return request({
     url: `/courseevalsys/cesCourseLines/addCesCourseLines`,
     method: 'POST',
-    params: { 'id': data.id, 'coursePart': data.coursePart, 'courseType': data.courseType, 'partWeight': data.partWeight }
+    params: { 'hid': data.hid, 'coursePart': data.coursePart, 'courseType': data.courseType, 'partWeight': data.partWeight }
   })
 }
 
@@ -70,5 +78,13 @@ export function upCesCourseLines(data) {
     url: `/courseevalsys/cesCourseLines/upCesCourseLines`,
     method: 'POST',
     params: { 'id': data.id, 'coursePart': data.coursePart, 'courseType': data.courseType, 'partWeight': data.partWeight }
+  })
+}
+
+export function delCesCourseLines(id) {
+  return request({
+    url: `/courseevalsys/cesCourseLines/removeCesCourseLines`,
+    method: 'POST',
+    params: { 'id': id }
   })
 }
