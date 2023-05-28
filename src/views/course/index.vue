@@ -122,7 +122,7 @@
     <el-dialog title="课程目标" :visible.sync="dialogFormVisible1">
       <el-form ref="dataForm1" :rules="rules" :model="temp" label-position="left" label-width="120px" style="width: 400px; margin-left:50px;">
         <el-form-item label="成绩类型" prop="courseType">
-          <el-select ref="select" v-model="temp.courseType" placeholder="请选择成绩类型"  @change="handleChange">
+          <el-select ref="select" v-model="temp.courseType" placeholder="请选择成绩类型" @change="handleChange">
             <el-option v-for="item in typeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
@@ -144,7 +144,6 @@
         </el-button>
       </div>
     </el-dialog>
-
 
     <el-dialog :visible.sync="dialogPvVisible" title="班级达成度详情">
       <el-table :data="pvData" border fit highlight-current-row style="width: 100%">

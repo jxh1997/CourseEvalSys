@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <h1>欢迎「{{name}}」使用大学生课程学习形成性评价系统～</h1>
+    <h1>欢迎「{{ name }}」使用大学生课程学习形成性评价系统～</h1>
   </div>
 </template>
 <script>
