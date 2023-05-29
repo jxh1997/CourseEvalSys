@@ -133,7 +133,6 @@ export default {
           this.loading = true
           this.$store.dispatch('user/login', this.loginForm)
             .then((e) => {
-              console.log(e)
               this.$router.push({ path: this.redirect || '/', query: this.otherQuery })
               this.loading = false
             })
@@ -141,7 +140,6 @@ export default {
               this.loading = false
             })
         } else {
-          console.log('error submit!!')
           return false
         }
       })

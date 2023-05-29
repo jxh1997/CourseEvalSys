@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <div class="filter-container">
-      <el-input v-model="listQuery.studentName" placeholder="姓名" style="width: 200px; margin-right: 10px;" class="filter-item" @keyup.enter.native="handleFilter" />
+      <el-input v-model="listQuery.tabName" placeholder="页面名称" style="width: 200px; margin-right: 10px;" class="filter-item" @keyup.enter.native="handleFilter" />
       <el-button v-waves class="filter-item" type="primary" icon="el-icon-search" @click="handleFilter">
         搜索
       </el-button>
@@ -20,19 +20,29 @@
       style="width: 100%;"
       @sort-change="sortChange"
     >
-      <el-table-column label="学生唯一标识" prop="id" sortable="custom" align="center" width="150" :class-name="getSortClass('id')">
+      <el-table-column label="菜单唯一标识" prop="id" sortable="custom" align="center" width="150" :class-name="getSortClass('id')">
         <template slot-scope="{row}">
           <span>{{ row.id }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="姓名" align="center">
+      <el-table-column label="菜单名称" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.studentName }}</span>
+          <span>{{ row.tabName }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="班级" align="center">
+      <el-table-column label="菜单图标" align="center">
         <template slot-scope="{row}">
-          <span>{{ getClassName(row.classId) }}</span>
+          <span>{{ row.tabIcon }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="菜单url" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.tabUrl }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="排序号" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.tabDesc }}</span>
         </template>
       </el-table-column>
       <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
@@ -51,13 +61,17 @@
 
     <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
       <el-form ref="dataForm" :rules="rules" :model="temp" label-position="left" label-width="70px" style="width: 400px; margin-left:50px;">
-        <el-form-item label="姓名" prop="studentName">
-          <el-input v-model="temp.studentName" />
+        <el-form-item label="菜单名称" prop="tabName">
+          <el-input v-model="temp.tabName" />
         </el-form-item>
-        <el-form-item label="班级" prop="classId">
-          <el-select ref="select" v-model="temp.classId" :disabled="dialogStatus==='create' ? false : true" placeholder="请选择">
-            <el-option v-for="item in classOptions" :key="item.value" :label="item.label" :value="item.value" />
-          </el-select>
+        <el-form-item label="菜单图标" prop="tabIcon">
+          <el-input v-model="temp.tabIcon" />
+        </el-form-item>
+        <el-form-item label="菜单url" prop="tabUrl">
+          <el-input v-model="temp.tabUrl" />
+        </el-form-item>
+        <el-form-item label="排序号" prop="tabDesc">
+          <el-input v-model="temp.tabDesc" />
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -83,11 +97,9 @@
 </template>
 
 <script>
-import { getStudentinfo, addStudent, getClassList, delStudent, updateStudent } from '@/api/student'
+import { getsysTab, addsysTab, delsysTab, updatesysTab } from '@/api/pagesmanager'
 import waves from '@/directive/waves' // waves directive
-import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination'
-import { getToken } from '@/utils/auth'
 
 const calendarTypeOptions = [
   { key: 'CN', display_name: 'China' },
@@ -138,28 +150,30 @@ export default {
       showReviewer: false,
       temp: {
         id: undefined,
-        studentName: undefined,
-        classId: undefined,
+        tabName: undefined,
+        tabIcon: undefined,
+        tabUrl: undefined,
+        tabDesc: undefined,
         delFlag: undefined
       },
       dialogFormVisible: false,
       dialogStatus: '',
       textMap: {
-        update: '编辑学生',
-        create: '创建学生'
+        update: '编辑菜单',
+        create: '新建菜单'
       },
       dialogPvVisible: false,
       pvData: [],
       rules: {
-        type: [{ required: true, message: 'type is required', trigger: 'change' }],
-        timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
-        title: [{ required: true, message: 'title is required', trigger: 'blur' }]
+        tabName: [{ required: true, message: '此项为必填项', trigger: 'change' }],
+        tabIcon: [{ required: true, message: '此项为必填项', trigger: 'change' }],
+        tabUrl: [{ required: true, message: '此项为必填项', trigger: 'change' }],
+        tabDesc: [{ required: true, message: '此项为必填项', trigger: 'change' }]
       },
       downloadLoading: false
     }
   },
   created() {
-    this.getClassList()
     this.getList()
   },
   methods: {
@@ -172,7 +186,7 @@ export default {
     },
     getList() {
       this.listLoading = true
-      getStudentinfo(this.listQuery).then(response => {
+      getsysTab(this.listQuery).then(response => {
         this.list = response.data
         this.total = response.total
         this.listLoading = false
@@ -181,39 +195,6 @@ export default {
     handleFilter() {
       this.listQuery.page = 1
       this.getList()
-    },
-    async getClassList() {
-      const uid = getToken()
-      getClassList(uid).then(response => {
-        if (response.code === 200) {
-          const labal = []
-          response.data.forEach((item, index) => {
-            var labaldata = {
-              'value': item.id,
-              'label': item.classname
-            }
-            labal.push(labaldata)
-          })
-          this.classOptions = labal
-        } else {
-          this.$notify({
-            title: 'Fail',
-            dangerouslyUseHTMLString: true,
-            message: response.msg,
-            type: 'error'
-          })
-        }
-      })
-
-      const classList = await getClassList(uid)
-      classList
-    },
-    handleModifyStatus(row, status) {
-      this.$message({
-        message: '操作Success',
-        type: 'success'
-      })
-      row.status = status
     },
     sortChange(data) {
       const { prop, order } = data
@@ -232,8 +213,10 @@ export default {
     resetTemp() {
       this.temp = {
         id: undefined,
-        studentName: undefined,
-        classId: undefined,
+        tabName: undefined,
+        tabIcon: undefined,
+        tabUrl: undefined,
+        tabDesc: undefined,
         delFlag: undefined
       }
     },
@@ -248,7 +231,7 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          addStudent(this.temp).then(response => {
+          addsysTab(this.temp).then(response => {
             if (response.code === 200) {
               this.getList(this.listQuery)
               this.dialogFormVisible = false
@@ -273,7 +256,6 @@ export default {
     handleUpdate(row) {
       this.temp = Object.assign({}, row) // copy obj
       this.dialogStatus = 'update'
-      this.getClassList()
       this.dialogFormVisible = true
       this.$nextTick(() => {
         this.$refs['dataForm'].clearValidate()
@@ -282,7 +264,7 @@ export default {
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          updateStudent(this.temp).then(response => {
+          updatesysTab(this.temp).then(response => {
             if (response.code === 200) {
               const index = this.list.findIndex(v => v.id === this.temp.id)
               this.list.splice(index, 1, this.temp)
@@ -306,13 +288,13 @@ export default {
       })
     },
     handleDelete(row, index) {
-      this.$confirm('确定要删除该学生?', '提示', {
+      this.$confirm('确定要删除该菜单?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       })
         .then(async() => {
-          delStudent(row.id).then(response => {
+          delsysTab(row.id).then(response => {
             if (response.code === 200) {
               this.list.splice(index, 1)
               this.$notify({
@@ -332,18 +314,6 @@ export default {
           })
         })
         .catch(err => { console.error(err) })
-    },
-    handleDownload() {
-      this.downloadLoading = true
-    },
-    formatJson(filterVal) {
-      return this.list.map(v => filterVal.map(j => {
-        if (j === 'timestamp') {
-          return parseTime(v[j])
-        } else {
-          return v[j]
-        }
-      }))
     },
     getSortClass: function(key) {
       const sort = this.listQuery.sort

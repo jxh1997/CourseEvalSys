@@ -6,8 +6,11 @@ import { asyncRoutes, constantRoutes } from '@/router'
  * @param route
  */
 function hasPermission(roles, route) {
-  if (route.meta && route.meta.roles) {
-    return roles.some(role => route.meta.roles.includes(role))
+  if (route.path) {
+    return roles.some(role => {
+      // route.path.includes('/' + role.tabUrl)
+      return route.path === ('/' + role.tabUrl)
+    })
   } else {
     return true
   }
@@ -20,13 +23,12 @@ function hasPermission(roles, route) {
  */
 export function filterAsyncRoutes(routes, roles) {
   const res = []
-
   routes.forEach(route => {
     const tmp = { ...route }
     if (hasPermission(roles, tmp)) {
-      if (tmp.children) {
-        tmp.children = filterAsyncRoutes(tmp.children, roles)
-      }
+      // if (tmp.children) {
+      //   tmp.children = filterAsyncRoutes(tmp.children, roles)
+      // }
       res.push(tmp)
     }
   })

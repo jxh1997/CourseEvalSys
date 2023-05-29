@@ -103,7 +103,6 @@ export default {
     },
     async getRoles(listQuery) {
       const res = await fetchList(listQuery)
-      console.log(123, res.data)
       this.rolesList = res.data
     },
 

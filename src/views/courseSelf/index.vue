@@ -7,7 +7,7 @@
         </el-button>
       </div>
       <div>
-        <el-button :style="{background:'#1890ff',borderColor:'#1890ff'}" icon="el-icon-upload" size="mini" type="primary" @click=" dialogVisible=true">成绩单上传</el-button>
+        <el-button :style="{background:'#1890ff',borderColor:'#1890ff'}" icon="el-icon-upload" size="mini" type="primary" @click=" dialogVisible1=true">课程自评上传</el-button>
       </div>
     </div>
 
@@ -21,7 +21,7 @@
       style="width: 100%;"
       @sort-change="sortChange"
     >
-      <el-table-column label="成绩编号" align="center">
+      <el-table-column label="自评编号" align="center">
         <template slot-scope="{row}">
           <span>{{ row.id }}</span>
         </template>
@@ -38,19 +38,11 @@
       </el-table-column>
       <el-table-column label="成绩" align="center">
         <template slot-scope="{row}">
-          <span>{{ row.repVal }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="成绩类型" align="center">
-        <template slot-scope="{row}">
-          <span>{{ getGradeName(row.repType) }}</span>
+          <span>{{ row.seltLevel }}</span>
         </template>
       </el-table-column>
       <el-table-column label="Actions" align="center" width="330" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
-          <el-button size="mini" @click="getGradeInfo(row)">
-            成绩详情
-          </el-button>
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
             编辑
           </el-button>
@@ -75,12 +67,9 @@
             <el-option v-for="item in studentOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="成绩" prop="repVal">
-          <el-input v-model="temp.repVal" />
-        </el-form-item>
-        <el-form-item label="成绩类型" prop="repType">
-          <el-select ref="select" v-model="temp.repType" :disabled="dialogStatus==='create' ? false : true" placeholder="请选择成绩类型">
-            <el-option v-for="item in gradeOptions" :key="item.value" :label="item.label" :value="item.value" />
+        <el-form-item label="自评等级" prop="seltLevel">
+          <el-select ref="select" v-model="temp.seltLevel" placeholder="请选择自评等级">
+            <el-option v-for="item in courseSelfLevel" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
       </el-form>
@@ -92,40 +81,6 @@
           确定
         </el-button>
       </div>
-    </el-dialog>
-
-    <el-dialog :visible.sync="dialogPvVisible" title="成绩详情">
-      <el-table :data="pvData" border fit highlight-current-row style="width: 100%">
-        <el-table-column prop="type" label="成绩类型" />
-        <el-table-column prop="weight" label="成绩占比" />
-        <el-table-column prop="score" label="得分" />
-      </el-table>
-      <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="dialogPvVisible = false">取消</el-button>
-      </span>
-    </el-dialog>
-
-    <el-dialog :visible.sync="dialogVisible">
-      <el-upload
-        :multiple="true"
-        :file-list="fileList"
-        :show-file-list="true"
-        :on-remove="handleRemove"
-        :on-success="handleSuccess"
-        :before-upload="beforeUpload"
-        class="editor-slide-upload"
-        action="/api/courseevalsys/common/receiptReport"
-      >
-        <el-button size="small" type="primary">
-          点击上传成绩单
-        </el-button>
-      </el-upload>
-      <el-button @click="dialogVisible = false">
-        关闭
-      </el-button>
-      <!-- <el-button type="primary" @click="handleSubmit">
-        确认
-      </el-button> -->
     </el-dialog>
 
     <el-dialog :visible.sync="dialogVisible1">
@@ -140,7 +95,7 @@
         action="/api/courseevalsys/common/importCourseReport"
       >
         <el-button size="small" type="primary">
-          点击上传课程自评文件
+          点击上传课程自评成绩
         </el-button>
       </el-upload>
       <el-button @click="dialogVisible1 = false">
@@ -159,7 +114,8 @@ import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination'
 import { getCourseHeaders } from '@/api/course'
 import { getStudentinfo } from '@/api/student'
-import { addReportInfo, delReportInfo, getReportInfo, updateReportInfo, getGradeInfo } from '@/api/grade' // secondary package based on el-pagination
+import { getGradeInfo } from '@/api/grade'
+import { addCesCourseSelf, delCesCourseSelf, getCesCourseSelf, updateCesCourseSelf } from '@/api/courseSelf'
 const calendarTypeOptions = [
   { key: 'CN', display_name: 'China' },
   { key: 'US', display_name: 'USA' },
@@ -210,8 +166,7 @@ export default {
         id: undefined,
         courseId: undefined,
         studentId: undefined,
-        repVal: undefined,
-        repType: undefined
+        seltLevel: undefined
       },
       dialogFormVisible: false,
       dialogStatus: '',
@@ -222,9 +177,7 @@ export default {
       dialogPvVisible: false,
       pvData: [],
       rules: {
-        type: [{ required: true, message: 'type is required', trigger: 'change' }],
-        timestamp: [{ type: 'date', required: true, message: 'timestamp is required', trigger: 'change' }],
-        title: [{ required: true, message: 'title is required', trigger: 'blur' }]
+
       },
       downloadLoading: false,
       dialogVisible: false,
@@ -233,6 +186,13 @@ export default {
       fileList: [],
       courseOptions: [],
       studentOptions: [],
+      courseSelfLevel: [
+        { 'value': '100', 'labal': 'A' },
+        { 'value': '80', 'labal': 'B' },
+        { 'value': '60', 'labal': 'C' },
+        { 'value': '40', 'labal': 'D' },
+        { 'value': '20', 'labal': 'E' }
+      ],
       gradeOptions: [{
         value: 1,
         label: '小测验'
@@ -368,7 +328,6 @@ export default {
           type: 'error'
         })
       } else {
-        this.dialogVisible = false
         this.$notify({
           title: 'Success',
           dangerouslyUseHTMLString: true,
@@ -387,6 +346,7 @@ export default {
           type: 'error'
         })
       } else {
+        this.dialogVisible1 = false
         this.$notify({
           title: 'Success',
           dangerouslyUseHTMLString: true,
@@ -446,7 +406,7 @@ export default {
     },
     getList() {
       this.listLoading = true
-      getReportInfo(this.listQuery).then(response => {
+      getCesCourseSelf(this.listQuery).then(response => {
         this.list = response.data
         this.total = response.total
         this.listLoading = false
@@ -482,8 +442,7 @@ export default {
         id: undefined,
         courseId: undefined,
         studentId: undefined,
-        repVal: undefined,
-        repType: undefined
+        seltLevel: undefined
       }
     },
     handleCreate() {
@@ -497,7 +456,7 @@ export default {
     createData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          addReportInfo(this.temp).then(response => {
+          addCesCourseSelf(this.temp).then(response => {
             if (response.code === 200) {
               this.getList(this.listQuery)
               this.dialogFormVisible = false
@@ -531,7 +490,7 @@ export default {
     updateData() {
       this.$refs['dataForm'].validate((valid) => {
         if (valid) {
-          updateReportInfo(this.temp).then(response => {
+          updateCesCourseSelf(this.temp).then(response => {
             if (response.code === 200) {
               const index = this.list.findIndex(v => v.id === this.temp.id)
               this.list.splice(index, 1, this.temp)
@@ -561,7 +520,7 @@ export default {
         type: 'warning'
       })
         .then(async() => {
-          delReportInfo(row.id).then(response => {
+          delCesCourseSelf(row.id).then(response => {
             if (response.code === 200) {
               this.list.splice(index, 1)
               this.$notify({

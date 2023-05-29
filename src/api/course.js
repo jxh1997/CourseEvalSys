@@ -77,7 +77,7 @@ export function upCesCourseLines(data) {
   return request({
     url: `/courseevalsys/cesCourseLines/upCesCourseLines`,
     method: 'POST',
-    params: { 'id': data.id, 'coursePart': data.coursePart, 'courseType': data.courseType, 'partWeight': data.partWeight }
+    params: { 'eo': data }
   })
 }
 

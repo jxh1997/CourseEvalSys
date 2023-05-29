@@ -9,7 +9,6 @@ export function login(data) {
 }
 
 export function getInfo(token) {
-  console.log(token)
   return request({
     url: 'courseevalsys/common/getauthlist',
     method: 'POST',

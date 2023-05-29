@@ -38,6 +38,11 @@
           <span>{{ getTypeName(row.courseType) }}</span>
         </template>
       </el-table-column>
+      <el-table-column label="权重" align="center">
+        <template slot-scope="{row}">
+          <span>{{ row.partWeight }}%</span>
+        </template>
+      </el-table-column>
       <el-table-column label="Actions" align="center" width="250" class-name="small-padding fixed-width">
         <template slot-scope="{row,$index}">
           <el-button type="primary" size="mini" @click="handleUpdate(row)">
@@ -91,7 +96,7 @@ import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination'
 import { getToken } from '@/utils/auth'
 import { mapGetters } from 'vuex'
-import { addCourseHeaders, delCourseHeaders, getCourseHeaders, updateCourseHeaders, calculatorReport, calculateDetail, getCesCourseLinesById, upCesCourseLines, addCesCourseLines, getCesCourseLines, delCesCourseLines } from '@/api/course' // secondary package based on el-pagination
+import { getCourseHeaders, calculatorReport, calculateDetail, getCesCourseLinesById, upCesCourseLines, addCesCourseLines, getCesCourseLines, delCesCourseLines } from '@/api/course' // secondary package based on el-pagination
 import { fetchList } from '@/api/article'
 import { getClassList, getGradeList } from '@/api/student'
 
@@ -519,7 +524,7 @@ export default {
         if (valid) {
           upCesCourseLines(this.temp).then(response => {
             if (response.code === 200) {
-              this.dialogFormVisible1 = false
+              this.dialogFormVisible = false
               this.$notify({
                 title: 'Success',
                 dangerouslyUseHTMLString: true,
