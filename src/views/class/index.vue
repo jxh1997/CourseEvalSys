@@ -33,7 +33,7 @@
       </el-table-column>
       <el-table-column label="级部" align="center">
         <template slot-scope="{row}">
-          <span>{{ getStageName(row.gradeid) }}</span>
+          <span>{{ getGradeName(row.gradeid) }}</span>
         </template>
       </el-table-column>
       <el-table-column label="Actions" align="center" width="230" class-name="small-padding fixed-width">
@@ -90,6 +90,7 @@
 
 <script>
 import { getClass, addClass, delClass, updateClass } from '@/api/class'
+import { getGradeList } from '@/api/student'
 import waves from '@/directive/waves' // waves directive
 import { parseTime } from '@/utils'
 import Pagination from '@/components/Pagination'
@@ -166,12 +167,14 @@ export default {
       },
       downloadLoading: false,
       stageOptions: [],
+      gradeOptions: [],
       usersOptions: []
     }
   },
   created() {
     this.getStageList()
     this.getUserList()
+    this.getGradeList()
     this.getList()
   },
   methods: {
@@ -188,6 +191,29 @@ export default {
         c.value === row && (sName = c.label)
       })
       return sName
+    },
+    getGradeName(row) {
+      let sName = '-'
+      this.gradeOptions.map((c) => {
+        c.value === row && (sName = c.label)
+      })
+      return sName
+    },
+    // 级部列表
+    async getGradeList() {
+      getGradeList().then(response => {
+        if (response.code === 200) {
+          const labal = []
+          response.data.forEach((item, index) => {
+            var labaldata = {
+              'value': item.id,
+              'label': item.gradename
+            }
+            labal.push(labaldata)
+          })
+          this.gradeOptions = labal
+        }
+      })
     },
     getStageList() {
       var param = {
